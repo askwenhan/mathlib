@@ -3,6 +3,7 @@
 #  x:         the matrix of data
 #  threshold: the threshold for 2-norm of eigenvalues
 # Class members:
+#  x.pr.comp:    the principal components of the data
 #  cov:          the covariance matrix of the data
 #  eig.vec:      the eigenvalue decomposition matrix
 #  eig.vec.inv:  the inverse of the eigenvalue decomposition matrix, should also be the transpose of the eigenvalue decomposition matrix
@@ -34,7 +35,9 @@ pca = function(x, threshold) {
     sum = sum + eig.values[index] * eig.values[index]
   }
   
-  pca.result = list(cov = cov.matrix, eig.vec = eig.decomposition$vectors, eig.vec.inv = t(eig.vec), pr.eig.vec = matrix(eig.decomposition$vectors[,1:index], ncol = index), ratio = sum / sum.true)
+  pr.eig.matrix = matrix(eig.decomposition$vectors[,1:index], ncol = index)
+  
+  pca.result = list(pr.comp = x %*% pr.eig.matrix, all.comp = x %*% eig.decomposition$vectors, cov = cov.matrix, eig.vec = eig.decomposition$vectors, eig.vec.inv = t(eig.decomposition$vectors), pr.eig.vec = pr.eig.matrix, ratio = sum / sum.true)
   class(pca.result) = "pca"
   pca.result
 }
