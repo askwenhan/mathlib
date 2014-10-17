@@ -4,6 +4,10 @@ infer.arima <- function(predictor, externals){
   # Validate inputs
   size <- length(predictor)
   
+  if (size <= 0) {
+    stop("The length of the predictor must be positive.")
+  }
+  
   if (!is.matrix(externals)) {
     stop("Invalid argument: 'externals' must be a matrix.")
   }
@@ -13,35 +17,19 @@ infer.arima <- function(predictor, externals){
   }
   
   # Call auto.arima on predictor
-  arima.model = auto.arima(predictor)
-  best.p = arima.model$arma[1]
-  best.q = arima.model$arma[2]
-  best.d = arima.model$arma[length(arima.model$arma) - 1]
-  
-  # Get ARIMA model for predictor
-  fit <- Arima(x, order = c(best.p, best.q, best.d))
-  predictor.residuals <- residuals(Arima(x, model=fit))
-  
-  # Filter on all externals based on the arima model
-  
-  externals.residuals <- matrix(0, size, ncol(externals))
-  
-  for (i in 1 : ncol(externals)) {
-    externals.residuals[,i] <- residuals(Arima(externals[,i], model=fit))
-  }
-  
-  # Fit multivariable linear regression model
-  external.res.df <- data.frame(externals.residuals)
-  lin.fit <- lm(predictor.residuals ~ ., external.res.df)
-  
-  infer.arima.result <- list(arima.fit = fit, residuals.fit = lin.fit)
-  class(infer.arima.result) = "infer.arima"
-  infer.arima.result
+  arima.model = auto.arima(predictor, xreg = externals)
+  result <- list(model = arima.model)
+  class(result) = "infer.arima"
+  result
 }
 
-predict.infer.arima <- function(object, n.ahead, externals) {
-  if (class(df) != "infer.arima") {
+infer.predict <- function(object, n.ahead, externals) {
+  if (class(object) != "infer.arima") {
     stop("The model is of incorrect type.")
+  }
+  
+  if (n.ahead <= 0) {
+    stop("Invalid argument: 'n.ahead' must be positive.")
   }
   
   if (!is.matrix(externals)) {
@@ -52,8 +40,12 @@ predict.infer.arima <- function(object, n.ahead, externals) {
     stop("Invalid argument: The size of the prediction interval and size of externals does not match.")
   }
   
-  arima.prediction <- predict(object$arima.fit, n.ahead)
-  residuals.prediction <- predict(object$residuals.fit, data.frame(externals))
-  
-  return(arima.prediction$pred + residuals.prediction)
+  prediction <- forecast(object$model, h = n.ahead, xreg = externals)
+  pred <- prediction$mean
+  lower80 <- prediction$lower[,1]
+  lower95 <- prediction$lower[,2]
+  upper80 <- prediction$upper[,1]
+  upper95 <- prediction$upper[,2]
+  arima.infer.prediction <- list(pred = pred, lower80 = lower80, lower95 = lower95, upper80 = upper80, upper95 = upper95)
+  return(arima.infer.prediction)
 }
