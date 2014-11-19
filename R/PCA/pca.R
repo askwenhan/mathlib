@@ -10,7 +10,9 @@
 #  pr.eig.vec:   the principal part of the eigen value decomposition matrix. Its number of columns equals the number of principal components
 #  ratio:        the true ratio of the principal components. Should be no less than the threshold.
 
-pca = function(x, threshold) {
+pca = function(x, threshold, normalize=TRUE) {
+  require(stats)
+  
   if (!is.matrix(x)) {
     stop("Invalid argument: x must be a matrix.")
   }
@@ -23,6 +25,10 @@ pca = function(x, threshold) {
     stop("Invalid argument: threshold must be between 0 and 1.")
   }
   
+  if (normalize) {
+    x <- scale(x)
+  }
+  
   cov.matrix = cov(x)
   eig.decomposition = eigen(cov(x),TRUE,FALSE,FALSE)
   eig.values = eig.decomposition$values
@@ -30,14 +36,14 @@ pca = function(x, threshold) {
   sum = 0
   sum.true = sum(eig.values * eig.values)
   sum.threshold = sum.true * threshold
-  while (sum < threshold && index < length(eig.values)) {
+  while (sum < sum.threshold && index < length(eig.values)) {
     index = index + 1
     sum = sum + eig.values[index] * eig.values[index]
   }
   
   pr.eig.matrix = matrix(eig.decomposition$vectors[,1:index], ncol = index)
   
-  pca.result = list(pr.comp = x %*% pr.eig.matrix, all.comp = x %*% eig.decomposition$vectors, cov = cov.matrix, eig.vec = eig.decomposition$vectors, eig.vec.inv = t(eig.decomposition$vectors), pr.eig.vec = pr.eig.matrix, ratio = sum / sum.true)
+  pca.result = list(pr.comp = x %*% pr.eig.matrix, all.comp = x %*% eig.decomposition$vectors, cov = cov.matrix, eig.vec = eig.decomposition$vectors, eig.vec.inv = t(eig.decomposition$vectors), pr.eig.vec = pr.eig.matrix, ratio = sum / sum.true, center = attr(x, "scaled:center"), scale = attr(x, "scaled:scale"))
   class(pca.result) = "pca"
   pca.result
 }
